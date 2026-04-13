@@ -4,9 +4,7 @@
 
 // set up instances of each motor
 AF_DCMotor motor1(1); 
-AF_DCMotor motor2(2);
-AF_DCMotor motor3(3);
-AF_DCMotor motor4(4);
+AF_DCMotor motor2(2); // removed unnecessary motor 3 and 4 code
 
 // set up ultrasonic sensor
 UltraSonicDistanceSensor HCSR04(2, 13); // trig - D2, echo - D13
