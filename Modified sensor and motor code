@@ -1,0 +1,104 @@
+// Project 42 - Detecting Collisions with an Ultrasonic Distance Sensor
+#include <AFMotor_R4.h>
+#include <HCSR04.h>
+
+// set up instances of each motor
+AF_DCMotor motor1(1); 
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+// set up ultrasonic sensor
+UltraSonicDistanceSensor HCSR04(2, 13); // trig - D2, echo - D13
+
+boolean crash=false;
+// make a buffer so stray "ghost" objects don't trigger a turn around 
+const int BUFFER_SIZE = 5; // Number of readings to average
+float distanceBuffer[BUFFER_SIZE];
+int bufferIndex = 0;
+// initiate the buffer:
+void setupBuffer() 
+{
+  for (int i = 0; i < BUFFER_SIZE; i++) 
+  {
+    distanceBuffer[i] = 99.0; // starts the buffer with a safely large size
+  }
+}
+float getSmoothedDistance() 
+{
+  float rawDistance = HCSR04.measureDistanceCm();
+  if (rawDistance > 0) // ignores 0 and negative values
+  {
+    distanceBuffer[bufferIndex] = rawDistance;
+    bufferIndex++; // Move to the next spot in the array
+    if (bufferIndex >= BUFFER_SIZE) {
+      bufferIndex = 0; // reset buffer slot to 0 after it fills spot 5
+    }
+  }
+float sum = 0;
+  for (int i = 0; i < BUFFER_SIZE; i++) 
+  {
+    sum += distanceBuffer[i];
+  }
+  return sum / BUFFER_SIZE; // calculate the average of the 5 array values
+}
+void checkDistance() 
+{
+  float smoothedDistance = getSmoothedDistance(); // Use the average as the distance value 
+  if (smoothedDistance < 5.0) // Crash distance is 5 cm or less
+  {
+    crash = true;
+  }
+}
+void turnAround(int speed, int duration)
+{
+  motor1.setSpeed(speed);
+  motor2.setSpeed(speed);
+  motor1.run(BACKWARD);
+  motor2.run(FORWARD); // turn around instead of going backward
+  delay(duration);
+  motor1.run(RELEASE);
+  motor2.run(RELEASE); // removed unnecessary motor 3 and 4 code
+}
+
+void goForward(int duration, int speed)
+{
+  long a, b;
+  boolean move = true;
+  a = millis();
+  do
+  {
+    checkDistance();
+    if (crash == false)
+    {
+      motor1.setSpeed(speed);
+      motor2.setSpeed(speed);
+      motor1.run(FORWARD);
+      motor2.run(FORWARD);  // removed unnecessary motor 3 and 4 code
+    }
+    if (crash == true)
+    {
+      turnAround(200, 1000); // changed turn duration from 2 seconds to 1 second
+      crash = false;
+    }
+    b = millis() - a;
+    if (b >= duration)
+    {
+      move = false;
+    }
+  }
+  while (move != false);
+  // stop motors
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);  // removed unnecessary motor 3 and 4 code
+}
+
+void setup()
+{
+  delay(5000);
+}
+
+void loop()
+{
+  goForward(1000, 255);
+}
